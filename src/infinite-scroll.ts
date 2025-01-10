@@ -1,3 +1,10 @@
+type InfiniteScrollCallback = (() => Promise<void>) | (() => void);
+interface UseInfiniteScrollParams {
+  callback?: InfiniteScrollCallback;
+  useCallbackOnInit?: boolean;
+  delay?: number;
+}
+
 function throttle<T extends (...args: any[]) => void>(func: T, limit: number) {
   let lastFunc: ReturnType<typeof setTimeout>;
   let lastRan: number | null = null;
@@ -24,9 +31,8 @@ function throttle<T extends (...args: any[]) => void>(func: T, limit: number) {
 /**
  * Hook for implementing infinite scroll functionality.
  *
- * @param params - The parameters for the infinite scroll hook.
- * @param params.callback - A callback function to be called when the user scrolls to the bottom.
- *                          It can be a synchronous or asynchronous function.
+ * @param {UseInfiniteScrollParams} params - The parameters for the infinite scroll hook.
+ * @param {InfiniteScrollCallback} params.callback - A callback function to be called when the user scrolls to the bottom.It can be a synchronous or asynchronous function.
  * @param params.useCallbackOnInit - A boolean indicating whether to call the callback immediately on initialization.
  * @param params.delay - The delay in milliseconds for throttling the scroll event.
  *
@@ -47,13 +53,7 @@ function throttle<T extends (...args: any[]) => void>(func: T, limit: number) {
  * // Cleanup when no longer needed
  * uninit(document.getElementById('scrollableElement'));
  */
-type InfiniteScrollCallback = (() => Promise<void>) | (() => void);
-
-export default function useInfiniteScroll(params: {
-  callback?: InfiniteScrollCallback;
-  useCallbackOnInit?: boolean;
-  delay?: number;
-}) {
+export default function useInfiniteScroll(params: UseInfiniteScrollParams) {
   const {
     callback = () => {},
     useCallbackOnInit = true,
