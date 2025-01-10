@@ -1,10 +1,29 @@
 <template>
-  <div class="content" ref="contentRef">
-    <div v-for="(item, index) in items" :key="index" class="item">
-      {{ item.name.first }}
+  <section>
+    <h1>Users from RandomUser</h1>
+    <div class="content" ref="contentRef">
+      <div v-for="item in items" :key="item.id.value" class="item">
+        <div class="item__top">
+          <div class="item__image">
+            <img :src="item.picture.thumbnail" alt="" />
+          </div>
+          <div class="item__user">
+            <div class="item__name">
+              {{ item.name.first }} {{ item.name.last }}
+            </div>
+            <a :href="`tel:${item.phone}`">{{ item.phone }}</a>
+          </div>
+        </div>
+        <div class="item__description">
+          <p>
+            Lorem ipsum, dolor sit amet consectetur adipisicing elit. Excepturi
+            facere maiores reiciendis
+          </p>
+        </div>
+      </div>
+      <div v-if="isLoading">Loading...</div>
     </div>
-    <div v-if="isLoading">Loading...</div>
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -36,13 +55,3 @@ onUnmounted(() => {
   uninit();
 });
 </script>
-
-<style scoped>
-.item {
-  padding: 50px;
-  background: red;
-}
-.item:not(:last-child) {
-  margin-bottom: 30px;
-}
-</style>

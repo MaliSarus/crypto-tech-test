@@ -1,24 +1,19 @@
 function throttle<T extends (...args: any[]) => void>(func: T, limit: number) {
   let lastFunc: ReturnType<typeof setTimeout>;
-  let lastRan: number | undefined;
+  let lastRan: number | null = null;
 
   return function (...args: Parameters<T>) {
-    // @ts-expect-error this to var
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const context = this;
-
     const now = Date.now();
-    if (lastRan === undefined || now - lastRan >= limit) {
-      func.apply(context, args);
+
+    if (lastRan === null || now - lastRan >= limit) {
+      func(...args);
       lastRan = now;
     } else {
       clearTimeout(lastFunc);
       lastFunc = setTimeout(
         () => {
-          if (lastRan !== undefined && Date.now() - lastRan >= limit) {
-            func.apply(context, args);
-            lastRan = Date.now();
-          }
+          func(...args);
+          lastRan = Date.now();
         },
         limit - (now - lastRan),
       );
@@ -27,7 +22,7 @@ function throttle<T extends (...args: any[]) => void>(func: T, limit: number) {
 }
 
 /**
- * A custom hook for implementing infinite scroll functionality.
+ * Hook for implementing infinite scroll functionality.
  *
  * @param params - The parameters for the infinite scroll hook.
  * @param params.callback - A callback function to be called when the user scrolls to the bottom.
@@ -52,8 +47,10 @@ function throttle<T extends (...args: any[]) => void>(func: T, limit: number) {
  * // Cleanup when no longer needed
  * uninit(document.getElementById('scrollableElement'));
  */
+type InfiniteScrollCallback = (() => Promise<void>) | (() => void);
+
 export default function useInfiniteScroll(params: {
-  callback?: (() => Promise<void>) | (() => void);
+  callback?: InfiniteScrollCallback;
   useCallbackOnInit?: boolean;
   delay?: number;
 }) {
@@ -62,48 +59,55 @@ export default function useInfiniteScroll(params: {
     useCallbackOnInit = true,
     delay = 1000,
   } = params;
-  let throttledFunction: () => void;
-  const elementIsWindow = (element?: HTMLElement | Window) =>
-    !element || 'innerHeight' in element;
+  let scrollElement: HTMLElement | Window | null = null;
+  let isAttached = false;
 
-  const init = (element?: HTMLElement | Window) => {
+  const handleScroll = () => {
+    if (!scrollElement) return;
+    console.log('scroll');
+
+    const target =
+      scrollElement instanceof Window
+        ? document.documentElement
+        : scrollElement;
+
+    const scrollTop =
+      scrollElement instanceof Window ? window.scrollY : target.scrollTop;
+    const scrollHeight = target.scrollHeight;
+    const clientHeight = target.clientHeight;
+
+    if (scrollTop + clientHeight >= scrollHeight - 1) {
+      callback();
+    }
+  };
+
+  const throttledScrollHandler = throttle(handleScroll, delay);
+
+  const init = (element: HTMLElement | Window = window) => {
+    if (isAttached) {
+      console.warn('Infinite scroll already initialized.');
+      return;
+    }
     if (useCallbackOnInit) callback();
 
-    const scrollListenerFunction = () => {
-      let isScrolledToBottom: boolean;
-      if (!elementIsWindow(element))
-        isScrolledToBottom =
-          element.scrollHeight === element.offsetHeight + element.scrollTop;
-      else
-        isScrolledToBottom =
-          document.documentElement.scrollHeight - 1 <=
-          window.innerHeight + window.scrollY;
-      if (isScrolledToBottom) {
-        callback();
-      }
-    };
+    scrollElement = element;
 
-    throttledFunction = throttle(scrollListenerFunction, delay);
-    if (!elementIsWindow(element))
-      element.addEventListener('scroll', throttledFunction, {
-        passive: true,
-        capture: false,
-      });
-    else
-      window.addEventListener('scroll', throttledFunction, {
-        passive: true,
-        capture: false,
-      });
+    scrollElement.addEventListener('scroll', throttledScrollHandler, {
+      passive: true,
+      capture: false,
+    });
+    isAttached = true;
   };
 
-  const uninit = (element?: HTMLElement | Window) => {
-    if (!elementIsWindow(element))
-      element.removeEventListener('scroll', throttledFunction);
-    else window.removeEventListener('scroll', throttledFunction);
+  const uninit = () => {
+    if (!isAttached || !scrollElement) {
+      return;
+    }
+
+    scrollElement.removeEventListener('scroll', throttledScrollHandler);
+    scrollElement = null;
+    isAttached = false;
   };
 
-  return {
-    init,
-    uninit,
-  };
+  return { init, uninit };
 }
