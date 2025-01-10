@@ -8,8 +8,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
-import useInfiniteScroll from "./infinite-scroll";
+import { ref, onMounted, onUnmounted } from 'vue';
+import useInfiniteScroll from './infinite-scroll';
 
 const items = ref<any>([]);
 const contentRef = ref();
@@ -19,7 +19,7 @@ const isLoading = ref(false);
 async function loadMore() {
   isLoading.value = true;
   const res = await fetch(
-    `https://randomuser.me/api/?page=${page.value}&results=10`
+    `https://randomuser.me/api/?page=${page.value}&results=10`,
   );
   const data = await res.json();
   items.value.push(...data.results);

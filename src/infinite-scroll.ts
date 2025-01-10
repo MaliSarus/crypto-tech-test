@@ -3,7 +3,8 @@ function throttle<T extends (...args: any[]) => void>(func: T, limit: number) {
   let lastRan: number | undefined;
 
   return function (...args: Parameters<T>) {
-    // @ts-ignore
+    // @ts-expect-error this to var
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const context = this;
 
     const now = Date.now();
@@ -12,12 +13,15 @@ function throttle<T extends (...args: any[]) => void>(func: T, limit: number) {
       lastRan = now;
     } else {
       clearTimeout(lastFunc);
-      lastFunc = setTimeout(() => {
-        if (lastRan !== undefined && (Date.now() - lastRan) >= limit) {
-          func.apply(context, args);
-          lastRan = Date.now();
-        }
-      }, limit - (now - lastRan));
+      lastFunc = setTimeout(
+        () => {
+          if (lastRan !== undefined && Date.now() - lastRan >= limit) {
+            func.apply(context, args);
+            lastRan = Date.now();
+          }
+        },
+        limit - (now - lastRan),
+      );
     }
   };
 }
@@ -54,42 +58,52 @@ export default function useInfiniteScroll(params: {
   delay?: number;
 }) {
   const {
-    callback = () => { },
+    callback = () => {},
     useCallbackOnInit = true,
-    delay = 1000
+    delay = 1000,
   } = params;
   let throttledFunction: () => void;
-  const elementIsWindow = (element?: HTMLElement | Window) => !element || 'innerHeight' in element
+  const elementIsWindow = (element?: HTMLElement | Window) =>
+    !element || 'innerHeight' in element;
 
   const init = (element?: HTMLElement | Window) => {
-    if (useCallbackOnInit)
-      callback()
+    if (useCallbackOnInit) callback();
 
     const scrollListenerFunction = () => {
-      let isScrolledToBottom:boolean;
+      let isScrolledToBottom: boolean;
       if (!elementIsWindow(element))
-        isScrolledToBottom = element.scrollHeight === element.offsetHeight + element.scrollTop
+        isScrolledToBottom =
+          element.scrollHeight === element.offsetHeight + element.scrollTop;
       else
-        isScrolledToBottom = document.documentElement.scrollHeight - 1 <= window.innerHeight + window.scrollY
+        isScrolledToBottom =
+          document.documentElement.scrollHeight - 1 <=
+          window.innerHeight + window.scrollY;
       if (isScrolledToBottom) {
-        callback()
+        callback();
       }
-    }
+    };
 
-    throttledFunction = throttle(scrollListenerFunction, delay)
-    if (!elementIsWindow(element)) element.addEventListener('scroll', throttledFunction, { passive: true, capture: false })
-    else window.addEventListener('scroll', throttledFunction, { passive: true, capture: false })
-  }
+    throttledFunction = throttle(scrollListenerFunction, delay);
+    if (!elementIsWindow(element))
+      element.addEventListener('scroll', throttledFunction, {
+        passive: true,
+        capture: false,
+      });
+    else
+      window.addEventListener('scroll', throttledFunction, {
+        passive: true,
+        capture: false,
+      });
+  };
 
   const uninit = (element?: HTMLElement | Window) => {
     if (!elementIsWindow(element))
       element.removeEventListener('scroll', throttledFunction);
-    else
-      window.removeEventListener('scroll', throttledFunction);
-  }
+    else window.removeEventListener('scroll', throttledFunction);
+  };
 
   return {
     init,
-    uninit
+    uninit,
   };
 }
